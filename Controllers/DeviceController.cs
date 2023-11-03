@@ -15,8 +15,8 @@ namespace SysWatch.Controllers
     public class DeviceController : Controller
     {
         private readonly SysWatchContext _context;
-        private const string Key = "00112233445566778899AABBCCDDEEFF";
-        private const string IV = "12A3B4C5D6E7F8901234567890ABCDEF";
+        private const string Key = "0123456789ABCDEF";
+        private const string IV = "FEDCBA9876543210";
 
         public DeviceController(SysWatchContext context)
         {
@@ -59,7 +59,7 @@ namespace SysWatch.Controllers
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
-        [ValidateAntiForgeryToken]
+        // [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create([Bind("Id,UserName,Password,LinuxDistro,Cpu,DateTime,DiskUsage")] Device device)
         {
             if (ModelState.IsValid)
@@ -159,9 +159,10 @@ namespace SysWatch.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // POST: Device/AddServer
+        // get server information encrypted
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Post([FromBody] Device encryptedData)
+        public async Task<IActionResult> AddServer([Bind("Id,UserName,Password,LinuxDistro,Cpu,DateTime,DiskUsage")] Device encryptedData)
         {
             try
             {
@@ -209,6 +210,33 @@ namespace SysWatch.Controllers
         private bool DeviceExists(int id)
         {
           return (_context.Devices?.Any(e => e.Id == id)).GetValueOrDefault();
+        }
+
+        public static string EncryptString(string plainText)
+        {
+            byte[] array;
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Encoding.UTF8.GetBytes(Key);
+                aes.IV = Encoding.UTF8.GetBytes(IV);
+
+                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter streamWriter = new StreamWriter((Stream)cryptoStream))
+                        {
+                            streamWriter.Write(plainText);
+                        }
+
+                        array = memoryStream.ToArray();
+                    }
+                }
+            }
+            return Convert.ToBase64String(array);
         }
     }
 }
