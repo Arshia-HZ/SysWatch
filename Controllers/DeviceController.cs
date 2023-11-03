@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Security.Cryptography.Xml;
+using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,6 +15,8 @@ namespace SysWatch.Controllers
     public class DeviceController : Controller
     {
         private readonly SysWatchContext _context;
+        private const string Key = "00112233445566778899AABBCCDDEEFF";
+        private const string IV = "12A3B4C5D6E7F8901234567890ABCDEF";
 
         public DeviceController(SysWatchContext context)
         {
@@ -152,6 +157,53 @@ namespace SysWatch.Controllers
             
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Post([FromBody] Device encryptedData)
+        {
+            try
+            {
+                string username = DecryptData(encryptedData.UserName);
+                string password = DecryptData(encryptedData.Password);
+                string dateTime = DecryptData(encryptedData.DateTime);
+                string diskUsage = DecryptData(encryptedData.DiskUsage);
+                string linuxDistro = DecryptData(encryptedData.LinuxDistro);
+                string cpu = DecryptData(encryptedData.Cpu);
+
+                var newDevice = new Device()
+                {
+                    UserName = username,
+                    Password = password,
+                    DateTime = dateTime,
+                    DiskUsage = diskUsage,
+                    LinuxDistro = linuxDistro,
+                    Cpu = cpu
+                };
+
+                _context.Add(newDevice);
+                await _context.SaveChangesAsync();
+                return RedirectToAction(nameof(Index));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest("Error: " + ex.Message);
+            }
+        }
+
+        private static string DecryptData(string encryptedData)
+        {
+            using Aes aesAlg = Aes.Create();
+            aesAlg.Key = Encoding.UTF8.GetBytes(Key);
+            aesAlg.IV = Encoding.UTF8.GetBytes(IV);
+
+            ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
+
+            byte[] encryptedBytes = Convert.FromBase64String(encryptedData);
+            byte[] decryptedBytes = decryptor.TransformFinalBlock(encryptedBytes, 0, encryptedBytes.Length);
+
+            return Encoding.UTF8.GetString(decryptedBytes);
         }
 
         private bool DeviceExists(int id)
