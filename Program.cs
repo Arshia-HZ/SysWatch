@@ -7,14 +7,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
+
+// Connect DbContext to SQL Server!
+
 builder.Services.AddDbContext<SysWatchContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("SysWatch")));
+
+// Use InMemory DbContext!
+
+//builder.Services.AddDbContext<SysWatchContext>(options =>
+//    options.UseInMemoryDatabase("SysWatch"));
 
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Your API", Version = "v1" });
 });
-
 
 
 var app = builder.Build();
