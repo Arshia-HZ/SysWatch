@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Newtonsoft.Json;
 using SysWatch.Models;
 
 namespace SysWatch.Controllers
@@ -162,28 +163,32 @@ namespace SysWatch.Controllers
         // POST: Device/AddServer
         // get server information encrypted
         [HttpPost]
-        public async Task<IActionResult> AddServer([Bind("Id,UserName,Password,LinuxDistro,Cpu,DateTime,DiskUsage")] Device encryptedData)
+        public async Task<IActionResult> AddServer()
         {
             try
             {
-                string username = DecryptData(encryptedData.UserName);
-                string password = DecryptData(encryptedData.Password);
-                string dateTime = DecryptData(encryptedData.DateTime);
-                string diskUsage = DecryptData(encryptedData.DiskUsage);
-                string linuxDistro = DecryptData(encryptedData.LinuxDistro);
-                string cpu = DecryptData(encryptedData.Cpu);
+                // Decryption
+                // string linuxDistro = DecryptData(encryptedData.LinuxDistro);
+                // string username = DecryptData(encryptedData.UserName);
+                // string password = DecryptData(encryptedData.Password);
+                // string dateTime = DecryptData(encryptedData.DateTime);
+                // string diskUsage = DecryptData(encryptedData.DiskUsage);
+                // string cpu = DecryptData(encryptedData.Cpu);
 
-                var newDevice = new Device()
-                {
-                    UserName = username,
-                    Password = password,
-                    DateTime = dateTime,
-                    DiskUsage = diskUsage,
-                    LinuxDistro = linuxDistro,
-                    Cpu = cpu
-                };
+                // var newDevice = new Device()
+                // {
+                //     UserName = username,
+                //     Password = password,
+                //     DateTime = dateTime,
+                //     DiskUsage = diskUsage,
+                //     LinuxDistro = linuxDistro,
+                //     Cpu = cpu
+                // };
 
-                _context.Add(newDevice);
+                using StreamReader reader = new(Request.Body);
+                string requestBody = await reader.ReadToEndAsync();
+                Device device = JsonConvert.DeserializeObject<Device>(requestBody);
+                _context.Add(device);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
@@ -198,6 +203,7 @@ namespace SysWatch.Controllers
             using Aes aesAlg = Aes.Create();
             aesAlg.Key = Encoding.UTF8.GetBytes(Key);
             aesAlg.IV = Encoding.UTF8.GetBytes(IV);
+            // aesAlg.Padding = PaddingMode.PKCS7; // Set the padding mode
 
             ICryptoTransform decryptor = aesAlg.CreateDecryptor(aesAlg.Key, aesAlg.IV);
 
@@ -206,6 +212,7 @@ namespace SysWatch.Controllers
 
             return Encoding.UTF8.GetString(decryptedBytes);
         }
+
 
         private bool DeviceExists(int id)
         {

