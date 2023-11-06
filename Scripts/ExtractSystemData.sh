@@ -42,7 +42,7 @@ echo -e "Sending info to Server:\n"
 JSON_DATA="{\"UserName\": \"$CURRENT_USERNAME\", \"Password\": \"$CURRENT_PASS\", \"LinuxDistro\": \"$DISTRO\", \"Cpu\": \"$CPU_MODEL\", \"DateTime\": \"$DATE_TIME\", \"DiskUsage\": \"$DISK_USAGE\"}"
 
 # Send the cURL request with the JSON data
-curl --location 'http://127.0.0.1:7242/Device/AddServer' \
+curl --location 'http://172.18.222.247:7242/Device/AddServer' \
 --header 'Content-Type: application/json' \
 --header 'Accept: application/json' \
 --data "$JSON_DATA"

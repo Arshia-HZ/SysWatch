@@ -11,7 +11,7 @@ builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 // Connect DbContext to SQL Server!
 
 builder.Services.AddDbContext<SysWatchContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("SysWatch")));
+    options.UseInMemoryDatabase("TempDb"));
 
 // Use InMemory DbContext!
 
